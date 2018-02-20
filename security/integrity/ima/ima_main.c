@@ -38,6 +38,62 @@ int ima_appraise;
 int ima_hash_algo = HASH_ALGO_SHA1;
 static int hash_setup_done;
 
+//--------------------------- A-TEAM (start) --------------------------------
+#include <linux/mutex.h>
+EXPORT_SYMBOL(ima_accessor_module_init);
+EXPORT_SYMBOL(ima_accessor_module_exit);
+
+static struct mutex ima_accessor_mutex;
+static int ima_accessor_initialized;
+static IMA_ModuleHandle_t ima_accessor_kmod;
+static IMA_VoidFctPtrVoid_t ima_accessor_on_ima_error_fctptr;
+
+void ima_accessor_module_init(IMA_ModuleHandle_t moduleHandle, IMA_VoidFctPtrVoid_t onErrorHandler)
+{
+	printk(KERN_INFO "ima: init ima accessor module.\n");
+	mutex_lock(&ima_accessor_mutex);
+	if (!ima_accessor_initialized)
+	{
+		ima_accessor_initialized = 1;
+		ima_accessor_kmod = moduleHandle;
+		ima_accessor_on_ima_error_fctptr = onErrorHandler;
+	}
+	mutex_unlock(&ima_accessor_mutex);
+	printk(KERN_INFO "ima: ima accessor module initialized.\n");
+}
+
+void ima_accessor_module_exit(void)
+{
+	printk(KERN_INFO "ima: disconnect ima accessor module.\n");
+	mutex_lock(&ima_accessor_mutex);
+	if (ima_accessor_initialized)
+	{
+		ima_accessor_initialized = 0;
+		ima_accessor_kmod = 0;
+		ima_accessor_on_ima_error_fctptr = 0;
+	}
+	mutex_unlock(&ima_accessor_mutex);
+	printk(KERN_INFO "ima: ima accessor module disconnected.\n");
+}
+
+static void ima_accessor_on_ima_error(void)
+{
+	printk(KERN_ALERT "ima violation: detected an integrity violation!\n");
+	mutex_lock(&ima_accessor_mutex);
+	if (ima_accessor_initialized)
+	{
+		printk(KERN_INFO "ima violation: notify ima accessor!\n");
+		ima_accessor_on_ima_error_fctptr();
+		printk(KERN_INFO "ima violation: ima accessor is now notified!\n");
+	}
+	else 
+	{
+		printk(KERN_ALERT "ima violation: ima accessor is not initialized!\n");
+	}
+	mutex_unlock(&ima_accessor_mutex);
+}
+//---------------------------- A-TEAM (end) ---------------------------------
+
 static int __init hash_setup(char *str)
 {
 	struct ima_template_desc *template_desc = ima_template_desc_current();
@@ -249,8 +305,13 @@ static int process_measurement(struct file *file, char *buf, loff_t size,
 		pathname = ima_d_path(&file->f_path, &pathbuf, filename);
 
 	if (action & IMA_MEASURE)
+	//--------------------------- A-TEAM (start) --------------------------------
+	{
 		ima_store_measurement(iint, file, pathname,
 				      xattr_value, xattr_len, pcr);
+		ima_accessor_on_ima_error();
+	}
+	//---------------------------- A-TEAM (end) ---------------------------------
 	if (action & IMA_APPRAISE_SUBMASK)
 		rc = ima_appraise_measurement(func, iint, file, pathname,
 					      xattr_value, xattr_len, opened);
@@ -429,6 +490,13 @@ static int __init init_ima(void)
 	if (!error) {
 		ima_initialized = 1;
 		ima_update_policy_flag();
+		//--------------------------- A-TEAM (start) --------------------------------
+		printk(KERN_INFO "ima: default ima accessor variables.\n");
+		mutex_init(&ima_accessor_mutex);
+		ima_accessor_initialized = 0;
+		ima_accessor_kmod = 0;
+		ima_accessor_on_ima_error_fctptr = 0;
+		//---------------------------- A-TEAM (end) ---------------------------------
 	}
 	return error;
 }

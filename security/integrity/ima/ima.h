@@ -124,6 +124,13 @@ void ima_print_digest(struct seq_file *m, u8 *digest, u32 size);
 struct ima_template_desc *ima_template_desc_current(void);
 int ima_init_template(void);
 
+//--------------------------- A-TEAM (start) --------------------------------
+typedef void (*IMA_VoidFctPtrVoid_t)(void); 
+typedef struct module* IMA_ModuleHandle_t;
+void ima_accessor_module_init(IMA_ModuleHandle_t moduleHandle, IMA_VoidFctPtrVoid_t onErrorHandler);
+void ima_accessor_module_exit(void);
+//---------------------------- A-TEAM (end) ---------------------------------
+
 /*
  * used to protect h_table and sha_table
  */
