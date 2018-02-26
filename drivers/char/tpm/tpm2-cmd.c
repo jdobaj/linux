@@ -886,7 +886,7 @@ static int tpm2_do_selftest(struct tpm_chip *chip)
 
 	loops = jiffies_to_msecs(duration) / delay_msec;
 
-	rc = tpm2_start_selftest(chip, false);
+	rc = tpm2_start_selftest(chip, true);
 	if (rc)
 		return rc;
 
