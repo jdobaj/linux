@@ -131,8 +131,6 @@
 	power-domains = <&power RPI_POWER_DOMAIN_USB>;
 };
 
-&clocks {
-	firmware = <&firmware>;
 };
 
 sdhost_pins: &sdhost_gpio48 {
@@ -158,4 +156,3 @@ sdhost_pins: &sdhost_gpio48 {
 
 &vec {
 	status = "disabled";
-};
