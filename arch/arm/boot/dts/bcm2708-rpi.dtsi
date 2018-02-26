@@ -131,8 +131,6 @@
 	power-domains = <&power RPI_POWER_DOMAIN_USB>;
 };
 
-};
-
 sdhost_pins: &sdhost_gpio48 {
 	/* Add alias */
 };
@@ -156,3 +154,4 @@ sdhost_pins: &sdhost_gpio48 {
 
 &vec {
 	status = "disabled";
+};
